@@ -1,16 +1,26 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import QUrl
+from PyQt5.QtWebEngineWidgets import QWebEngineView
 import  requests
 from pyowm import OWM
 from pyowm.utils import config
 from pyowm.utils import timestamps
-from translate import Translator
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtCore import QUrl
+import json
+import time
+import datetime
+
 
 
 class Ui_main(object):
     def setupUi(self, main):
         main.setObjectName("main")
-        main.resize(581, 708)
+        main.resize(400, 400)
+        main.setFixedSize(500,400)
         palette = QtGui.QPalette()
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0))
         brush.setStyle(QtCore.Qt.SolidPattern)
@@ -169,6 +179,7 @@ class Ui_main(object):
         self.imput_metio.setObjectName("imput_metio")
         self.gridLayout.addWidget(self.imput_metio, 1, 0, 1, 1)
         self.get_button = QtWidgets.QPushButton(self.centralwidget)
+
         palette = QtGui.QPalette()
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0))
         brush.setStyle(QtCore.Qt.SolidPattern)
@@ -314,9 +325,11 @@ class Ui_main(object):
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 128))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.PlaceholderText, brush)
+
         self.get_button.setPalette(palette)
         self.get_button.setObjectName("get_button")
         self.gridLayout.addWidget(self.get_button, 3, 0, 1, 1)
+
         self.label_metio = QtWidgets.QLabel(self.centralwidget)
         self.label_metio.setObjectName("label_metio")
         self.gridLayout.addWidget(self.label_metio, 0, 0, 1, 1)
@@ -327,10 +340,12 @@ class Ui_main(object):
         self.statusbar = QtWidgets.QStatusBar(main)
         self.statusbar.setObjectName("statusbar")
         main.setStatusBar(self.statusbar)
-
+        
+        self.login_to_applications()
         self.get_but()
         self.retranslateUi(main)
         QtCore.QMetaObject.connectSlotsByName(main)
+
 
     def retranslateUi(self, main):
         _translate = QtCore.QCoreApplication.translate
@@ -338,44 +353,64 @@ class Ui_main(object):
         self.imput_metio.setPlaceholderText(_translate("main", "Введите город"))
         self.get_button.setText(_translate("main", "Найти"))
         self.label_metio.setText(_translate("main", "<html><head/><body><p align=\"center\"><span style=\" font-size:14pt;\">Погода</span></p></body></html>"))
+ 
     #####################################################################
     # метод обработки кнопок
+  
     def get_but(self):
-        self.get_button.clicked.connect(lambda: self.get_text_city())
+        self.get_button.clicked.connect(self.get_text_city)
+
 
     def get_text_city(self):
         set_imput = self.imput_metio.text()
-        return self.connect_owm(set_imput)
+        if set_imput:
+            return self.connect_owm(set_imput)
+        else:
+            message = QMessageBox()
+            message.setWindowTitle('Сообщения!')
+            message.setText('Укажите город.')
+            x = message.exec_()
+            return x
     
-    def trasled(self,text):
-        translator = Translator(rom_lang="EN",to_lang="RU")
-        translation = translator.translate(text)
-        return translation
+
 
     def connect_owm(self,name_city):
+        self.now = datetime.datetime.now()
+        self.now.strftime("%d-%m-%Y %H:%M")
         owm = OWM("6baa3de67a42e07047383bb8debd1551")
         mgr = owm.weather_manager()
         observation = mgr.weather_at_place(name_city)
         w = observation.weather
-        clouds = w.detailed_status
-        claud = self.trasled(clouds)
+
         wind_speed = w.wind()['speed']
-        temp = w.temperature("celsius")['temp']
-        temp_min = w.temperature('celsius')['temp_min']
-        temp_max = w.temperature('celsius')['temp_max']
+        self.temp = w.temperature("celsius")['temp']
         clo = w.clouds
-        arry = ['Погода на сегодня ',
-            'Максимальная температура: {} C'.format(temp_max),
-                'Температура: {} C'.format(temp),
-                'Минимальна температура: {} C'.format(temp_min),
+
+        arry = ['Погода на сегодня  {}'.format(self.now.strftime("%d-%m-%Y %H:%M")),
+                'Температура: {} C'.format(self.temp),
                 'Скорость ветра: {} м/с'.format( wind_speed),
-                'Облочность: {}'.format(claud),
                 'Плотность облаков: {} %'.format(clo)]
+                
         return self.get_displey(',\n'.join(arry))
+    
+
+    # помещяет начальный фон
+    def login_to_applications(self):
+        self.get_metio.setStyleSheet("background-image: url(img/3.jpg);  color: Fuchsia")
+
 
     def get_displey(self,arry):
-        self.get_metio.setText(str(arry))
-        
+        if self.temp <= 0:
+            self.get_metio.setStyleSheet("background-image: url(img/2.jpg); color: white")
+            self.get_metio.setText(str(arry))
+
+        elif self.temp >= 0:
+            self.get_metio.setStyleSheet("background-image: url(img/1.jpg); color: MediumBlue")
+            self.get_metio.setText(str(arry))
+
+
+
+
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
